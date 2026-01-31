@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Objexa Automation | AI Receptionist for Dental Practices</title>
+    <meta name="description"
+        content="24/7 AI receptionist that answers calls, books appointments, and never misses a patient. Built specifically for dental practices.">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236366f1'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='white'>🤖</text></svg>">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="container">
+            <a href="#" class="logo">
+                <i class="fas fa-robot"></i>
+                <span>Objexa<span class="ai-text">Automation</span></span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="#pricing">Pricing</a>
+                <a href="#faq">FAQ</a>
+                <!-- Auth Buttons -->
+                <button id="authBtn" class="btn-text"
+                    style="background:none; border:none; color:var(--text-secondary); cursor:pointer; display:none;">
+                    <i class="fas fa-user"></i> Sign In
+                </button>
+                <div id="userProfile" style="display:none; align-items:center; gap:8px;">
+                    <span id="userName" style="font-size:0.9rem;"></span>
+                    <button id="logoutBtn"
+                        style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+                <a href="#demo" class="btn btn-primary btn-nav">Book Demo</a>
+            </div>
+            <button class="hamburger" id="mobileMenuBtn" aria-label="Toggle menu">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+        </div>
+    </nav>
+    <div class="nav-overlay" id="navOverlay"></div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg">
+            <div class="gradient-orb orb-1"></div>
+            <div class="gradient-orb orb-2"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content" data-aos="fade-up">
+                <div class="badge">
+                    <i class="fas fa-shield-halved"></i>
+                    HIPAA Compliant • 24/7 Coverage
+                </div>
+                <h1>Never Lose a Patient to <span class="gradient-text">Voicemail</span> Again</h1>
+                <p class="hero-subtitle">AI-powered receptionist that answers every call, books appointments, and
+                    handles patient inquiries 24/7 — at a fraction of the cost of hiring staff.</p>
+
+                <div class="hero-cta">
+                    <a href="#demo" class="btn btn-primary btn-large">
+                        <i class="fas fa-calendar-check"></i>
+                        Book Free Demo
+                    </a>
+                    <a href="tel:+14157917422" class="btn btn-secondary btn-large">
+                        <i class="fas fa-phone"></i>
+                        Try It Now
+                    </a>
+                </div>
+
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number">30%</span>
+                        <span class="stat-label">of calls missed by avg practice</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat">
+                        <span class="stat-number">$100K+</span>
+                        <span class="stat-label">lost revenue per year</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat">
+                        <span class="stat-number">24/7</span>
+                        <span class="stat-label">AI coverage</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hero-visual" data-aos="fade-left" data-aos-delay="200">
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="call-interface">
+                            <div class="caller-info">
+                                <div class="caller-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span class="caller-name">Incoming Call</span>
+                                <span class="caller-number">New Patient</span>
+                            </div>
+                            <div class="ai-response">
+                                <div class="typing-indicator">
+                                    <span></span><span></span><span></span>
+                                </div>
+                                <p>"Hi! Thank you for calling Dental Care. This is Sarah, how may I help you today?"</p>
+                            </div>
+                            <div class="call-actions">
+                                <div class="action-item active">
+                                    <i class="fas fa-calendar-plus"></i>
+                                    <span>Booking...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="floating-card card-1" data-aos="fade-up" data-aos-delay="400">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Appointment Booked</span>
+                </div>
+                <div class="floating-card card-2" data-aos="fade-up" data-aos-delay="500">
+                    <i class="fas fa-clock"></i>
+                    <span>Response: 0.5s</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Logos Section -->
+    <section class="logos-section">
+        <div class="container">
+            <p class="logos-title">Integrates with your existing software</p>
+        </div>
+        <div class="logos-marquee">
+            <div class="logos-track">
+                <div class="logo-item">
+                    <img src="images/Henry Schein One_idgM28iBol_1.png" alt="Dentrix">
+                </div>
+                <div class="logo-item">
+                    <img src="images/idyzoH07Xp_logos.png" alt="Open Dental">
+                </div>
+                <div class="logo-item">
+                    <img src="images/idsvsGndg__1769879912765.jpeg" alt="Eaglesoft">
+                </div>
+                <div class="logo-item">
+                    <img src="images/idvl_l1wsQ_1769879246290.png" alt="Curve Dental">
+                </div>
+                <!-- Duplicate for seamless loop -->
+                <div class="logo-item">
+                    <img src="images/Henry Schein One_idgM28iBol_1.png" alt="Dentrix">
+                </div>
+                <div class="logo-item">
+                    <img src="images/idyzoH07Xp_logos.png" alt="Open Dental">
+                </div>
+                <div class="logo-item">
+                    <img src="images/idsvsGndg__1769879912765.jpeg" alt="Eaglesoft">
+                </div>
+                <div class="logo-item">
+                    <img src="images/idvl_l1wsQ_1769879246290.png" alt="Curve Dental">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problem Section -->
+    <section class="problem-section">
+        <div class="container">
+            <div class="problem-content" data-aos="fade-up">
+                <h2>Your Front Desk is <span class="text-danger">Costing You Patients</span></h2>
+                <div class="problem-grid">
+                    <div class="problem-card">
+                        <div class="problem-icon">
+                            <i class="fas fa-phone-slash"></i>
+                        </div>
+                        <h3>Missed Calls</h3>
+                        <p>Average practice misses 30-40% of incoming calls during busy hours and after-hours.</p>
+                    </div>
+                    <div class="problem-card">
+                        <div class="problem-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <h3>Lost Revenue</h3>
+                        <p>Each missed new patient call = $500-1,000 in lost lifetime value.</p>
+                    </div>
+                    <div class="problem-card">
+                        <div class="problem-icon">
+                            <i class="fas fa-users-slash"></i>
+                        </div>
+                        <h3>Staffing Issues</h3>
+                        <p>Hiring reliable receptionists is expensive and turnover is constant.</p>
+                    </div>
+                    <div class="problem-card">
+                        <div class="problem-icon">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <h3>After-Hours Gap</h3>
+                        <p>50% of appointment requests come outside business hours.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">Features</span>
+                <h2>Everything Your Front Desk Does, <span class="gradient-text">Automated</span></h2>
+                <p>Our AI receptionist handles calls just like your best employee — but 24/7, without breaks, and at a
+                    fraction of the cost.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="100">
+                    <div class="feature-icon">
+                        <i class="fas fa-phone-volume"></i>
+                    </div>
+                    <h3>24/7 Call Answering</h3>
+                    <p>Never miss a call. Our AI answers every call instantly, even at 2 AM on weekends.</p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="150">
+                    <div class="feature-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <h3>Appointment Scheduling</h3>
+                    <p>Books, reschedules, and cancels appointments directly in your practice management software.</p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="200">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Natural Conversations</h3>
+                    <p>Sounds human, not robotic. Patients often can't tell they're talking to AI.</p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="250">
+                    <div class="feature-icon">
+                        <i class="fas fa-ambulance"></i>
+                    </div>
+                    <h3>Emergency Detection</h3>
+                    <p>Instantly identifies dental emergencies and routes them to on-call staff.</p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="300">
+                    <div class="feature-icon">
+                        <i class="fas fa-language"></i>
+                    </div>
+                    <h3>Multilingual Support</h3>
+                    <p>Speaks English, Spanish, and more — serving your diverse patient base.</p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="350">
+                    <div class="feature-icon">
+                        <i class="fas fa-sms"></i>
+                    </div>
+                    <h3>SMS & Text</h3>
+                    <p>Handles text messages, sends confirmations, and appointment reminders.</p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="400">
+                    <div class="feature-icon">
+                        <i class="fas fa-phone-flip"></i>
+                    </div>
+                    <h3>Smart Call Routing</h3>
+                    <p>Transfers calls to the right department or staff member when needed.</p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-aos-delay="450">
+                    <div class="feature-icon">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <h3>Insurance Handling</h3>
+                    <p>Answers insurance questions and collects insurance information from patients.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works-section" id="how-it-works">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">How It Works</span>
+                <h2>Go Live in <span class="gradient-text">24 Hours</span></h2>
+                <p>We handle the entire setup. You just forward your calls and watch the appointments roll in.</p>
+            </div>
+
+            <div class="steps-container">
+                <div class="step" data-aos="fade-up" data-aos-delay="100">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Quick Setup Call</h3>
+                        <p>We learn about your practice — hours, services, appointment types, and preferences.</p>
+                    </div>
+                </div>
+
+                <div class="step-connector"></div>
+
+                <div class="step" data-aos="fade-up" data-aos-delay="200">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>We Configure Your AI</h3>
+                        <p>Our team customizes the AI with your practice details, voice, and workflows.</p>
+                    </div>
+                </div>
+
+                <div class="step-connector"></div>
+
+                <div class="step" data-aos="fade-up" data-aos-delay="300">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Forward Your Calls</h3>
+                        <p>Simply forward calls to your Objexa number. Works with any phone system.</p>
+                    </div>
+                </div>
+
+                <div class="step-connector"></div>
+
+                <div class="step" data-aos="fade-up" data-aos-delay="400">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Watch It Work</h3>
+                        <p>Monitor calls, appointments, and analytics from your dashboard.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section class="demo-section" id="try-demo">
+        <div class="container">
+            <div class="demo-card" data-aos="fade-up">
+                <div class="demo-content">
+                    <h2>Hear It For Yourself</h2>
+                    <p>Call our demo line right now and experience what your patients will experience.</p>
+                    <a href="tel:+14157917422" class="demo-phone">
+                        <i class="fas fa-phone-volume"></i>
+                        <span>+1 (415) 791-7422</span>
+                    </a>
+                    <p class="demo-hint">Try asking: "I'd like to book a cleaning appointment"</p>
+                </div>
+                <div class="demo-visual">
+                    <div class="sound-wave">
+                        <span></span><span></span><span></span><span></span><span></span>
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing-section" id="pricing">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">Pricing</span>
+                <h2>Simple, <span class="gradient-text">Affordable</span> Pricing</h2>
+                <p>No hidden fees. No long-term contracts. Cancel anytime.</p>
+            </div>
+
+            <div class="pricing-grid">
+                <div class="pricing-card" data-aos="fade-up" data-aos-delay="100">
+                    <div class="pricing-header">
+                        <h3>Starter</h3>
+                        <p>Perfect for testing</p>
+                    </div>
+                    <div class="pricing-price">
+                        <span class="currency">$</span>
+                        <span class="amount">199</span>
+                        <span class="period">/month</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> After-hours coverage only</li>
+                        <li><i class="fas fa-check"></i> Up to 100 calls/month</li>
+                        <li><i class="fas fa-check"></i> Appointment scheduling</li>
+                        <li><i class="fas fa-check"></i> SMS notifications</li>
+                        <li><i class="fas fa-check"></i> Basic analytics</li>
+                        <li><i class="fas fa-check"></i> Email support</li>
+                    </ul>
+                    <a href="#demo" class="btn btn-secondary btn-full">Start Free Trial</a>
+                </div>
+
+                <div class="pricing-card popular" data-aos="fade-up" data-aos-delay="200">
+                    <div class="popular-badge">Most Popular</div>
+                    <div class="pricing-header">
+                        <h3>Professional</h3>
+                        <p>For growing practices</p>
+                    </div>
+                    <div class="pricing-price">
+                        <span class="currency">$</span>
+                        <span class="amount">349</span>
+                        <span class="period">/month</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> <strong>24/7 coverage</strong></li>
+                        <li><i class="fas fa-check"></i> Up to 300 calls/month</li>
+                        <li><i class="fas fa-check"></i> Appointment scheduling</li>
+                        <li><i class="fas fa-check"></i> SMS conversations</li>
+                        <li><i class="fas fa-check"></i> Emergency detection</li>
+                        <li><i class="fas fa-check"></i> Call recordings</li>
+                        <li><i class="fas fa-check"></i> Priority support</li>
+                    </ul>
+                    <a href="#demo" class="btn btn-primary btn-full">Start Free Trial</a>
+                </div>
+
+                <div class="pricing-card" data-aos="fade-up" data-aos-delay="300">
+                    <div class="pricing-header">
+                        <h3>Premium</h3>
+                        <p>For busy practices</p>
+                    </div>
+                    <div class="pricing-price">
+                        <span class="currency">$</span>
+                        <span class="amount">599</span>
+                        <span class="period">/month</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> <strong>24/7 coverage</strong></li>
+                        <li><i class="fas fa-check"></i> Unlimited calls</li>
+                        <li><i class="fas fa-check"></i> Outbound recall calls</li>
+                        <li><i class="fas fa-check"></i> PMS integration</li>
+                        <li><i class="fas fa-check"></i> Advanced analytics</li>
+                        <li><i class="fas fa-check"></i> Custom voice & scripts</li>
+                        <li><i class="fas fa-check"></i> Dedicated account manager</li>
+                    </ul>
+                    <a href="#demo" class="btn btn-secondary btn-full">Start Free Trial</a>
+                </div>
+            </div>
+
+            <div class="pricing-note" data-aos="fade-up">
+                <i class="fas fa-gift"></i>
+                <p><strong>Limited Offer:</strong> First 10 practices get 2 weeks FREE + 20% off for life as founding
+                    members.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials-section" id="testimonials">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">Testimonials</span>
+                <h2>What Dentists Are <span class="gradient-text">Saying</span></h2>
+            </div>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card" data-aos="fade-up" data-aos-delay="100">
+                    <div class="testimonial-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p>"We were missing 40% of our calls. Within the first month, Objexa booked us 23 new patients we
+                        would have lost to voicemail."</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">
+                            <i class="fas fa-user-doctor"></i>
+                        </div>
+                        <div class="author-info">
+                            <strong>Dr. Michael Chen</strong>
+                            <span>Bright Smile Dental, Houston TX</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card" data-aos="fade-up" data-aos-delay="200">
+                    <div class="testimonial-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p>"It's like having a perfect receptionist who never calls in sick. My staff can finally focus on
+                        in-office patients instead of the phone."</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">
+                            <i class="fas fa-user-doctor"></i>
+                        </div>
+                        <div class="author-info">
+                            <strong>Dr. Sarah Martinez</strong>
+                            <span>Family Dental Care, Phoenix AZ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card" data-aos="fade-up" data-aos-delay="300">
+                    <div class="testimonial-stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p>"The ROI was immediate. We're saving $3,000/month on staffing while actually answering MORE calls
+                        than before."</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">
+                            <i class="fas fa-user-doctor"></i>
+                        </div>
+                        <div class="author-info">
+                            <strong>Dr. James Wilson</strong>
+                            <span>Wilson Dental Group, San Diego CA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section" id="faq">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up">
+                <span class="section-badge">FAQ</span>
+                <h2>Frequently Asked <span class="gradient-text">Questions</span></h2>
+            </div>
+
+            <div class="faq-grid">
+                <div class="faq-item" data-aos="fade-up">
+                    <button class="faq-question">
+                        <span>Will patients know they're talking to an AI?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Our AI uses the most advanced natural language technology available. It speaks naturally with
+                            appropriate pauses, tone variations, and conversational expressions. Most patients don't
+                            realize they're talking to AI. However, if directly asked, the AI will honestly identify
+                            itself as an assistant.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up">
+                    <button class="faq-question">
+                        <span>Is it HIPAA compliant?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes, absolutely. We take patient privacy seriously. All data is encrypted, we sign BAAs
+                            (Business Associate Agreements) with every practice, and our systems meet HIPAA security
+                            requirements.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up">
+                    <button class="faq-question">
+                        <span>What practice management systems do you integrate with?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>We integrate with all major dental PMS including Dentrix, Open Dental, Eaglesoft, Denticon,
+                            Curve Dental, PracticeWorks, and more. If you use a different system, let us know — we're
+                            constantly adding new integrations.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up">
+                    <button class="faq-question">
+                        <span>What happens if there's a dental emergency?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Our AI is trained to recognize dental emergencies (severe pain, bleeding, trauma, swelling).
+                            When detected, it immediately offers to transfer to your on-call staff or emergency line.
+                            You can customize the emergency protocol for your practice.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up">
+                    <button class="faq-question">
+                        <span>Can I use my existing phone number?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes! You don't need to change your phone number. Simply set up call forwarding from your
+                            existing number to your Objexa line. Works with any phone system including Weave, Mango,
+                            RingCentral, and traditional phone lines.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up">
+                    <button class="faq-question">
+                        <span>How long does setup take?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Most practices are live within 24-48 hours. We handle all the configuration — you just need a
+                            30-minute onboarding call to share your practice details and preferences.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up">
+                    <button class="faq-question">
+                        <span>What if I want to cancel?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>No contracts, no commitments. You can cancel anytime with 30 days notice. We're confident
+                            you'll love Objexa, which is why we offer a 2-week free trial.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up">
+                    <button class="faq-question">
+                        <span>Can the AI speak Spanish?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes! Our AI supports multiple languages including Spanish, which is essential for many US
+                            dental practices. The AI can detect the caller's language preference and respond
+                            accordingly.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="demo">
+        <div class="container">
+            <div class="cta-card" data-aos="fade-up">
+                <h2>Ready to Stop Losing Patients?</h2>
+                <p>Join practices across the US that never miss a call. Start your free 2-week trial today.</p>
+
+                <div class="cta-form">
+                    <form id="demoForm">
+                        <div class="form-row">
+                            <input type="text" name="name" placeholder="Your Name" required>
+                            <input type="text" name="practice" placeholder="Practice Name" required>
+                        </div>
+                        <div class="form-row">
+                            <input type="email" name="email" placeholder="Email Address" required>
+                            <input type="tel" name="phone" placeholder="Phone Number" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-large btn-full">
+                            <i class="fas fa-calendar-check"></i>
+                            Book My Free Demo
+                        </button>
+                    </form>
+                    <p class="form-note">Free 2-week trial • No credit card required • Cancel anytime</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#" class="logo">
+                        <i class="fas fa-robot"></i>
+                        <span>Objexa<span class="ai-text">Automation</span></span>
+                    </a>
+                    <p>AI receptionist built specifically for dental practices. Never miss a patient call again.</p>
+                    <div class="footer-social">
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+
+                <div class="footer-links">
+                    <h4>Product</h4>
+                    <a href="#features">Features</a>
+                    <a href="#pricing">Pricing</a>
+                    <a href="#how-it-works">How It Works</a>
+                    <a href="#demo">Book Demo</a>
+                </div>
+
+                <div class="footer-links">
+                    <h4>Company</h4>
+                    <a href="#">About Us</a>
+                    <a href="#">Contact</a>
+                    <a href="#">Careers</a>
+                    <a href="#">Blog</a>
+                </div>
+
+                <div class="footer-links">
+                    <h4>Legal</h4>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">HIPAA Compliance</a>
+                    <a href="#">BAA</a>
+                </div>
+
+                <div class="footer-contact">
+                    <h4>Contact Us</h4>
+                    <a href="mailto:ali.hassan@objexaautomation.tech"><i class="fas fa-envelope"></i>
+                        ali.hassan@objexaautomation.tech</a>
+                    <a href="#try-demo" class="contact-note"><i class="fas fa-headset"></i> Or try our live AI demo
+                        above!</a>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <div class="footer-badges">
+                    <span><i class="fas fa-shield-halved"></i> HIPAA Compliant</span>
+                    <span><i class="fas fa-lock"></i> SOC 2</span>
+                    <span><i class="fas fa-certificate"></i> SSL Secured</span>
+                </div>
+                <p>&copy; 2026 Objexa Automation. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
