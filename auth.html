@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Objexa Automation</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            background: var(--bg-primary);
+        }
+
+        /* Left Side - Branding */
+        .auth-brand {
+            flex: 1;
+            background: linear-gradient(135deg, rgba(10, 10, 15, 0.9), rgba(10, 10, 15, 0.8)), url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-brand::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient-3);
+            pointer-events: none;
+        }
+
+        /* Right Side - Form */
+        .auth-form-container {
+            width: 520px;
+            max-height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding: 30px 40px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            position: relative;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        .auth-header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 24px;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: 12px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+            color: var(--text-muted);
+        }
+
+        .auth-tab.active {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: white;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .form-select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2371717a' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px;
+        }
+
+        .form-select option {
+            background: var(--bg-card);
+            color: white;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .other-practice-input {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .other-practice-input.visible {
+            display: block;
+        }
+
+        .forgot-password {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        .forgot-password a {
+            color: var(--primary);
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+
+        .forgot-password a:hover {
+            color: var(--primary-light);
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            margin: 24px 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .auth-divider span {
+            padding: 0 14px;
+        }
+
+        .social-btn {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            color: black;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .social-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .success-message {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .password-requirements {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        @media (max-width: 900px) {
+            .auth-brand {
+                display: none;
+            }
+
+            .auth-form-container {
+                width: 100%;
+                padding: 24px;
+            }
+        }
+
+        /* Forgot Password Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            padding: 32px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid var(--border);
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            margin-bottom: 8px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="auth-container">
+        <!-- Brand Side -->
+        <div class="auth-brand">
+            <h1 style="font-size: 3.5rem; margin-bottom: 20px;">
+                Objexa<span class="ai-text">Automation</span>
+            </h1>
+            <p style="font-size: 1.2rem; color: var(--text-secondary); max-width: 400px;">
+                The future of dental practice management. Join hundreds of practices automating their growth.
+            </p>
+        </div>
+
+        <!-- Form Side -->
+        <div class="auth-form-container">
+            <a href="index.html" class="back-link">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+
+            <div class="auth-header">
+                <h2 id="formTitle">Welcome Back</h2>
+                <p style="color: var(--text-muted);" id="formSubtitle">Enter your details to access your account</p>
+            </div>
+
+            <div id="errorMessage" class="error-message"></div>
+            <div id="successMessage" class="success-message"></div>
+
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login">Login</div>
+                <div class="auth-tab" data-tab="register">Register</div>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" name="email" class="form-input" placeholder="doctor@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" class="form-input" placeholder="••••••••" required>
+                </div>
+                <div class="forgot-password">
+                    <a href="#" id="forgotPasswordLink">Forgot password?</a>
+                </div>
+                <button type="submit" class="btn btn-full btn-large"
+                    style="background: var(--gradient-1); border: none;">Sign In</button>
+            </form>
+
+            <!-- Register Form (Hidden by default) -->
+            <form id="registerForm" style="display: none;">
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" name="fullName" class="form-input" placeholder="Dr. John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label>Practice Type *</label>
+                    <select name="practiceType" class="form-select" id="practiceTypeSelect" required>
+                        <option value="">Select your practice type...</option>
+                        <option value="General Dentistry">General Dentistry</option>
+                        <option value="Pediatric Dentistry">Pediatric Dentistry</option>
+                        <option value="Orthodontics">Orthodontics</option>
+                        <option value="Periodontics">Periodontics</option>
+                        <option value="Endodontics">Endodontics</option>
+                        <option value="Oral Surgery">Oral Surgery</option>
+                        <option value="Prosthodontics">Prosthodontics</option>
+                        <option value="Cosmetic Dentistry">Cosmetic Dentistry</option>
+                        <option value="other">Other (Specify)</option>
+                    </select>
+                    <input type="text" name="otherPractice" id="otherPracticeInput"
+                        class="form-input other-practice-input" placeholder="Enter your practice type">
+                </div>
+                <div class="form-group">
+                    <label>Practice Name *</label>
+                    <input type="text" name="practiceName" class="form-input" placeholder="Dental Care Center" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" name="phone" class="form-input" placeholder="+1 (555) 123-4567">
+                </div>
+                <div class="form-group">
+                    <label>Email Address *</label>
+                    <input type="email" name="email" class="form-input" placeholder="doctor@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="password" name="password" class="form-input" placeholder="••••••••" required
+                        minlength="8">
+                    <p class="password-requirements">Minimum 8 characters</p>
+                </div>
+                <button type="submit" class="btn btn-full btn-large"
+                    style="background: var(--gradient-1); border: none;">Create Account</button>
+            </form>
+
+            <div class="auth-divider">
+                <span>OR CONTINUE WITH</span>
+            </div>
+
+            <button id="googleAuthBtn" class="social-btn">
+                <i class="fab fa-google"></i> Google
+            </button>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal-overlay" id="forgotPasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Reset Password</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Enter your email and we'll send you a reset
+                    link.</p>
+            </div>
+            <form id="forgotPasswordForm">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" name="email" class="form-input" placeholder="doctor@example.com" required>
+                </div>
+                <button type="submit" class="btn btn-full"
+                    style="background: var(--gradient-1); border: none; margin-bottom: 12px;">Send Reset Link</button>
+                <button type="button" id="closeModalBtn" class="btn btn-full"
+                    style="background: var(--bg-card); border: 1px solid var(--border);">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+</body>
+
+</html>
