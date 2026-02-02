@@ -179,6 +179,27 @@ setTimeout(checkAuth, 100);
 const demoForm = document.getElementById('demoForm');
 
 if (demoForm) {
+    // ===== Pre-fill Form from Saved Data (After verification redirect) =====
+    const savedDemoData = sessionStorage.getItem('demoFormData');
+    if (savedDemoData) {
+        try {
+            const formObj = JSON.parse(savedDemoData);
+            if (formObj.name) demoForm.querySelector('[name="name"]').value = formObj.name;
+            if (formObj.email) demoForm.querySelector('[name="email"]').value = formObj.email;
+            if (formObj.phone) demoForm.querySelector('[name="phone"]').value = formObj.phone;
+            if (formObj.practice) demoForm.querySelector('[name="practice"]').value = formObj.practice;
+
+            // Scroll to demo section if we came from redirect
+            if (window.location.hash === '#demo') {
+                setTimeout(() => {
+                    document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
+                }, 300);
+            }
+        } catch (e) {
+            console.log('Failed to restore form data:', e);
+        }
+    }
+
     demoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 

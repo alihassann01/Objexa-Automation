@@ -250,8 +250,19 @@ registerForm.addEventListener('submit', async (e) => {
         if (data.user && data.user.identities && data.user.identities.length === 0) {
             showError('This email is already registered. Please login instead.');
         } else {
+            // Save redirect intent to localStorage for multi-device support
+            const redirectTarget = urlParams.get('redirect');
+            if (redirectTarget) {
+                localStorage.setItem('pendingRedirect', redirectTarget);
+            }
+            // Save the email for verification polling
+            localStorage.setItem('pendingVerificationEmail', formData.get('email'));
+
             showSuccess('Registration successful! Please check your email to verify your account.');
             registerForm.reset();
+
+            // Start polling for verification (multi-device support)
+            startVerificationPolling();
         }
     }
 });
@@ -312,3 +323,49 @@ async function checkExistingSession() {
 
 // Run on page load
 setTimeout(checkExistingSession, 100);
+
+// ===== Multi-Device Verification Polling =====
+let verificationPollInterval = null;
+
+function startVerificationPolling() {
+    // Poll every 3 seconds to check if user has been verified
+    if (verificationPollInterval) clearInterval(verificationPollInterval);
+
+    verificationPollInterval = setInterval(async () => {
+        if (!window.supabaseClient) return;
+
+        try {
+            // Try to get the current session
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+
+            if (session && session.user) {
+                // User is now verified and logged in!
+                clearInterval(verificationPollInterval);
+
+                // Get the saved redirect intent
+                const pendingRedirect = localStorage.getItem('pendingRedirect');
+
+                // Clean up localStorage
+                localStorage.removeItem('pendingVerificationEmail');
+                localStorage.removeItem('pendingRedirect');
+
+                // Redirect based on intent
+                if (pendingRedirect === 'demo') {
+                    window.location.href = 'index.html#demo';
+                } else {
+                    window.location.href = 'index.html';
+                }
+            }
+        } catch (e) {
+            console.log('Verification polling error:', e);
+        }
+    }, 3000); // Check every 3 seconds
+}
+
+// ===== Check if we should resume polling =====
+const pendingEmail = localStorage.getItem('pendingVerificationEmail');
+if (pendingEmail) {
+    // User registered but hasn't verified yet - resume polling
+    showSuccess('Waiting for email verification... Check your inbox!');
+    startVerificationPolling();
+}
