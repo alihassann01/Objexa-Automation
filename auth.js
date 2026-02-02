@@ -215,10 +215,36 @@ registerForm.addEventListener('submit', async (e) => {
         return;
     }
 
-    // Check password length
+    // ===== Password Strength Validation =====
     const password = formData.get('password');
+    const passwordErrors = [];
+
     if (password.length < 8) {
-        showError('Password must be at least 8 characters long.');
+        passwordErrors.push('at least 8 characters');
+    }
+    if (!/[A-Z]/.test(password)) {
+        passwordErrors.push('1 uppercase letter');
+    }
+    if (!/[0-9]/.test(password)) {
+        passwordErrors.push('1 number');
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        passwordErrors.push('1 special character (!@#$%^&*)');
+    }
+
+    if (passwordErrors.length > 0) {
+        showError(`Password must contain: ${passwordErrors.join(', ')}`);
+        setLoading(btn, false);
+        return;
+    }
+
+    // ===== Phone Number Format Validation =====
+    const phone = formData.get('phone');
+    // Remove all non-digit characters for checking
+    const digitsOnly = phone.replace(/\D/g, '');
+
+    if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+        showError('Please enter a valid phone number (10-15 digits)');
         setLoading(btn, false);
         return;
     }

@@ -228,27 +228,57 @@ if (demoForm) {
         const submitBtn = demoForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
 
+        // ===== Email Format Validation =====
+        const email = formData.get('email');
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            alert('Please enter a valid email address');
+            return;
+        }
+
         // Show loading state
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
         submitBtn.disabled = true;
 
         try {
+            const bookingData = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                practice_name: formData.get('practice'),
+                created_at: new Date()
+            };
+
             // Insert into Supabase
             const { error } = await window.supabaseClient
                 .from('demo_bookings')
-                .insert([{
-                    name: formData.get('name'),
-                    email: formData.get('email'),
-                    phone: formData.get('phone'),
-                    practice_name: formData.get('practice'),
-                    created_at: new Date()
-                }]);
+                .insert([bookingData]);
 
             if (error) throw error;
 
+            // Call Edge Function to send confirmation email
+            try {
+                await fetch('https://vtlblicmwoaohjgbjpix.supabase.co/functions/v1/send-demo-confirmation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${(await window.supabaseClient.auth.getSession()).data.session?.access_token}`
+                    },
+                    body: JSON.stringify(bookingData)
+                });
+            } catch (emailError) {
+                console.log('Email sending failed, but booking was saved:', emailError);
+            }
+
             // Show success message
-            submitBtn.innerHTML = '<i class="fas fa-check"></i> Demo Requested!';
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> Demo Booked!';
             submitBtn.style.background = 'var(--success)';
+
+            // Show confirmation message
+            alert('✅ Demo booked successfully!\\n\\nWe\\'ve sent you a confirmation email with the details.');
+
+            // Clear saved form data
+            sessionStorage.removeItem('demoFormData');
 
             // Reset form
             demoForm.reset();
