@@ -732,6 +732,24 @@
         </div>
     </footer>
 
+    <!-- Branded Success Modal -->
+    <div id="successModal" class="modal-overlay">
+        <div class="modal-content text-center" style="max-width: 450px;">
+            <div
+                style="width: 80px; height: 80px; background: rgba(52, 211, 153, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 1px solid var(--success);">
+                <i class="fas fa-check" style="font-size: 2.5rem; color: var(--success);"></i>
+            </div>
+            <h3 style="font-size: 1.8rem; margin-bottom: 15px;">Demo Requested!</h3>
+            <p style="color: var(--text-muted); font-size: 1.1rem; line-height: 1.6; margin-bottom: 25px;">
+                Thank you for choosing Objexa. We've sent a confirmation email with all the details to your inbox.
+            </p>
+            <button class="btn btn-primary btn-full"
+                onclick="document.getElementById('successModal').classList.remove('active')">
+                Close
+            </button>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script src="supabase-config.js"></script>

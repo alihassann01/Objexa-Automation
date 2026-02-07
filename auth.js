@@ -49,6 +49,22 @@ function setLoading(btn, isLoading) {
     }
 }
 
+// ===== Password Toggle Function =====
+function togglePassword(inputId, buttonEl) {
+    const input = document.getElementById(inputId);
+    const icon = buttonEl.querySelector('i');
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    }
+}
+
 // ===== Practice Type "Other" Toggle =====
 if (practiceTypeSelect) {
     practiceTypeSelect.addEventListener('change', () => {
@@ -134,8 +150,33 @@ if (forgotPasswordForm) {
 
         setLoading(btn, true);
 
+        // Helper to show modal errors
+        const modalError = document.getElementById('modalErrorMessage');
+        function showModalError(msg) {
+            if (modalError) {
+                modalError.textContent = msg;
+                modalError.style.display = 'block';
+            }
+        }
+
         if (!window.supabaseClient) {
-            alert('Connection error. Please refresh.');
+            showModalError('Connection error. Please refresh.');
+            setLoading(btn, false);
+            return;
+        }
+
+        // Check if email exists in database first
+        const { data: emailExists, error: rpcError } = await window.supabaseClient
+            .rpc('check_email_exists', { email_to_check: email });
+
+        if (rpcError) {
+            showModalError('Error checking email. Please try again.');
+            setLoading(btn, false);
+            return;
+        }
+
+        if (!emailExists) {
+            showModalError('This email is not registered. Please check your email or create an account.');
             setLoading(btn, false);
             return;
         }
@@ -147,11 +188,16 @@ if (forgotPasswordForm) {
         setLoading(btn, false);
 
         if (error) {
-            alert(error.message);
+            showModalError(error.message);
         } else {
-            alert('Password reset link sent! Check your email.');
+            // Show styled modal for success
+            const resetLinkModal = document.getElementById('resetLinkSentModal');
+            if (resetLinkModal) {
+                resetLinkModal.classList.add('active');
+            }
             forgotPasswordModal.classList.remove('active');
             forgotPasswordForm.reset();
+            if (modalError) modalError.style.display = 'none';
         }
     });
 }
@@ -238,6 +284,14 @@ registerForm.addEventListener('submit', async (e) => {
         return;
     }
 
+    // ===== Password Match Validation =====
+    const confirmPassword = formData.get('confirmPassword');
+    if (password !== confirmPassword) {
+        showError('Passwords do not match. Please check and try again.');
+        setLoading(btn, false);
+        return;
+    }
+
     // ===== Phone Number Format Validation =====
     const phone = formData.get('phone');
     // Remove all non-digit characters for checking
@@ -281,14 +335,13 @@ registerForm.addEventListener('submit', async (e) => {
             if (redirectTarget) {
                 localStorage.setItem('pendingRedirect', redirectTarget);
             }
-            // Save the email for verification polling
-            localStorage.setItem('pendingVerificationEmail', formData.get('email'));
 
-            showSuccess('Registration successful! Please check your email to verify your account.');
+            // Start polling for verification with credentials (cross-device support)
+            startVerificationPolling(formData.get('email'), password);
+
+            // Show verification modal
+            showVerificationModal(formData.get('email'));
             registerForm.reset();
-
-            // Start polling for verification (multi-device support)
-            startVerificationPolling();
         }
     }
 });
@@ -300,10 +353,16 @@ googleAuthBtn.addEventListener('click', async () => {
         return;
     }
 
+    // Preserve redirect param through OAuth flow
+    const redirectTarget = urlParams.get('redirect');
+    const redirectUrl = redirectTarget
+        ? `${window.location.origin}/complete-profile.html?redirect=${redirectTarget}`
+        : `${window.location.origin}/complete-profile.html`;
+
     const { error } = await window.supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: window.location.origin + '/complete-profile.html'
+            redirectTo: redirectUrl
         }
     });
 
@@ -320,7 +379,15 @@ if (urlParams.get('verified') === 'true') {
 
 // ===== Check if Already Logged In =====
 async function checkExistingSession() {
-    if (!window.supabaseClient) return;
+    const loadingOverlay = document.getElementById('authLoadingOverlay');
+    const authContainer = document.getElementById('authContainer');
+    
+    if (!window.supabaseClient) {
+        // No supabase - show form anyway
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        if (authContainer) authContainer.style.display = 'flex';
+        return;
+    }
 
     const { data: { user } } = await window.supabaseClient.auth.getUser();
 
@@ -331,67 +398,167 @@ async function checkExistingSession() {
         // Handle Redirect Param (e.g. back to demo)
         const redirectTarget = urlParams.get('redirect');
 
+        // Check if this is a Google-only user without password
+        const hasGoogleIdentity = user.identities?.some(id => id.provider === 'google');
+        const hasEmailIdentity = user.identities?.some(id => id.provider === 'email');
+
         if (!metadata?.practice_name && !metadata?.practice_type) {
-            // Redirect to complete profile
+            // Redirect to complete profile (no flash - stay on loading)
+            window.location.href = redirectTarget ?
+                `complete-profile.html?redirect=${redirectTarget}` :
+                'complete-profile.html';
+        } else if (hasGoogleIdentity && !hasEmailIdentity) {
+            // Google user without password - needs to set one (no flash - stay on loading)
             window.location.href = redirectTarget ?
                 `complete-profile.html?redirect=${redirectTarget}` :
                 'complete-profile.html';
         } else {
-            // Already logged in with complete profile
+            // Already logged in with complete profile - redirect immediately (no flash)
             if (redirectTarget === 'demo') {
                 window.location.href = 'index.html#demo';
             } else {
                 window.location.href = 'index.html';
             }
         }
+    } else {
+        // No user - show the auth form
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        if (authContainer) authContainer.style.display = 'flex';
     }
 }
 
-// Run on page load
-setTimeout(checkExistingSession, 100);
+// Run on page load - immediately to prevent flash
+checkExistingSession();
 
 // ===== Multi-Device Verification Polling =====
 let verificationPollInterval = null;
+let verificationPollAttempts = 0;
+const MAX_POLL_ATTEMPTS = 60; // ~4 minutes at 4 second intervals
+let pendingCredentials = { email: null, password: null };
 
-function startVerificationPolling() {
-    // Poll every 3 seconds to check if user has been verified
+function startVerificationPolling(email, password) {
+    // Store credentials for polling
+    pendingCredentials = { email, password };
+    verificationPollAttempts = 0;
+
     if (verificationPollInterval) clearInterval(verificationPollInterval);
 
     verificationPollInterval = setInterval(async () => {
         if (!window.supabaseClient) return;
 
-        try {
-            // Try to get the current session
-            const { data: { session } } = await window.supabaseClient.auth.getSession();
+        verificationPollAttempts++;
 
-            if (session && session.user) {
+        // Stop polling after max attempts and show resend option
+        if (verificationPollAttempts >= MAX_POLL_ATTEMPTS) {
+            clearInterval(verificationPollInterval);
+            showResendOption();
+            return;
+        }
+
+        try {
+            // Attempt silent login - will succeed only if email is verified
+            const { data, error } = await window.supabaseClient.auth.signInWithPassword({
+                email: pendingCredentials.email,
+                password: pendingCredentials.password
+            });
+
+            if (data?.session) {
                 // User is now verified and logged in!
                 clearInterval(verificationPollInterval);
+                hideVerificationModal();
 
                 // Get the saved redirect intent
                 const pendingRedirect = localStorage.getItem('pendingRedirect');
-
-                // Clean up localStorage
-                localStorage.removeItem('pendingVerificationEmail');
                 localStorage.removeItem('pendingRedirect');
 
-                // Redirect based on intent
-                if (pendingRedirect === 'demo') {
-                    window.location.href = 'index.html#demo';
-                } else {
-                    window.location.href = 'index.html';
-                }
+                // Show success briefly then redirect
+                showSuccess('Email verified! Logging you in...');
+
+                setTimeout(() => {
+                    if (pendingRedirect === 'demo') {
+                        window.location.href = 'index.html#demo';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                }, 1000);
             }
+            // If error is "Email not confirmed", just keep waiting...
         } catch (e) {
             console.log('Verification polling error:', e);
         }
-    }, 3000); // Check every 3 seconds
+    }, 4000); // Check every 4 seconds
 }
 
-// ===== Check if we should resume polling =====
-const pendingEmail = localStorage.getItem('pendingVerificationEmail');
-if (pendingEmail) {
-    // User registered but hasn't verified yet - resume polling
-    showSuccess('Waiting for email verification... Check your inbox!');
-    startVerificationPolling();
+function showResendOption() {
+    const resendBtn = document.getElementById('resendVerificationBtn');
+    const pollingStatus = document.getElementById('pollingStatus');
+    if (resendBtn) {
+        resendBtn.style.display = 'inline-block';
+    }
+    if (pollingStatus) {
+        pollingStatus.textContent = 'Verification link may have expired.';
+    }
+}
+
+function showVerificationModal(email) {
+    const modal = document.getElementById('verificationModal');
+    const emailDisplay = document.getElementById('verificationEmail');
+    if (modal) {
+        modal.classList.add('active');
+    }
+    if (emailDisplay) {
+        emailDisplay.textContent = email;
+    }
+}
+
+function hideVerificationModal() {
+    const modal = document.getElementById('verificationModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Resend verification email handler
+async function resendVerificationEmail() {
+    if (!window.supabaseClient || !pendingCredentials.email) return;
+
+    const resendBtn = document.getElementById('resendVerificationBtn');
+    if (resendBtn) {
+        resendBtn.disabled = true;
+        resendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+    }
+
+    const { error } = await window.supabaseClient.auth.resend({
+        type: 'signup',
+        email: pendingCredentials.email,
+        options: {
+            emailRedirectTo: window.location.origin + '/auth.html?verified=true'
+        }
+    });
+
+    if (resendBtn) {
+        if (error) {
+            resendBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Failed - Try Again';
+            resendBtn.disabled = false;
+        } else {
+            resendBtn.innerHTML = '<i class="fas fa-check"></i> Email Sent!';
+            // Restart polling
+            verificationPollAttempts = 0;
+            startVerificationPolling(pendingCredentials.email, pendingCredentials.password);
+            // Re-enable after delay
+            setTimeout(() => {
+                resendBtn.innerHTML = '<i class="fas fa-redo"></i> Resend Email';
+                resendBtn.disabled = false;
+                resendBtn.style.display = 'none';
+            }, 30000); // 30 second cooldown
+        }
+    }
+}
+
+// Cancel verification and go back
+function cancelVerification() {
+    if (verificationPollInterval) clearInterval(verificationPollInterval);
+    hideVerificationModal();
+    localStorage.removeItem('pendingRedirect');
+    pendingCredentials = { email: null, password: null };
 }

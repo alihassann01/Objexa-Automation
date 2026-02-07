@@ -20,7 +20,7 @@
     <style>
         .profile-container {
             min-height: 100vh;
-            display: flex;
+            display: none; /* Hidden by default to prevent flash */
             align-items: center;
             justify-content: center;
             background: var(--bg-primary);
@@ -147,6 +147,14 @@
 </head>
 
 <body>
+    <!-- Loading Screen to prevent flash -->
+    <div id="loadingScreen" style="position: fixed; inset: 0; background: var(--bg-primary); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+        <div style="text-align: center;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary); margin-bottom: 16px;"></i>
+            <p style="color: var(--text-muted);">Loading...</p>
+        </div>
+    </div>
+
     <div class="profile-container">
         <div class="profile-card">
             <div class="profile-header">
@@ -195,6 +203,31 @@
                     <label>Phone Number</label>
                     <input type="tel" name="phone" class="form-input" placeholder="+1 (555) 123-4567">
                 </div>
+
+                <div class="form-group">
+                    <label>Set Password *</label>
+                    <div style="position: relative;">
+                        <input type="password" name="password" id="profilePassword" class="form-input"
+                            placeholder="Set a password for login" minlength="8" style="padding-right: 45px;" required>
+                        <button type="button" onclick="togglePassword('profilePassword', this)"
+                            style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; z-index: 10;">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                    </div>
+                    <p class="password-requirements" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Min 8 chars, 1 uppercase, 1 number, 1 special character</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Confirm Password *</label>
+                    <div style="position: relative;">
+                        <input type="password" name="confirmPassword" id="profileConfirmPassword" class="form-input"
+                            placeholder="Confirm your password" minlength="8" style="padding-right: 45px;" required>
+                        <button type="button" onclick="togglePassword('profileConfirmPassword', this)"
+                            style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; z-index: 10;">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
                 <button type="submit" class="btn btn-full btn-large"
                     style="background: var(--gradient-1); border: none;">
                     <i class="fas fa-check"></i> Complete Setup
@@ -219,6 +252,8 @@
         function showError(message) {
             errorMessage.textContent = message;
             errorMessage.style.display = 'block';
+            // Auto-scroll to error message so user can see it
+            errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         // Practice Type "Other" Toggle
@@ -233,25 +268,82 @@
             }
         });
 
+        // Setup initial visibility
+        document.querySelector('.profile-container').style.display = 'none';
+
+        // ===== Prevent Back Button Exploitation =====
+        // Replace current history entry so user can't go back to Google auth
+        history.replaceState(null, '', window.location.href);
+        
+        // Listen for popstate (back/forward button)
+        window.addEventListener('popstate', function(e) {
+            // Push the state again to prevent navigation away
+            history.pushState(null, '', window.location.href);
+        });
+
+        // Password Toggle Logic
+        window.togglePassword = function (inputId, buttonEl) {
+            const input = document.getElementById(inputId);
+            const icon = buttonEl.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+        };
+
         // Load user data
         async function loadUserData() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            
             if (!window.supabaseClient) {
+                loadingScreen.style.display = 'none';
                 showError('Connection error. Please refresh.');
+                document.querySelector('.profile-container').style.display = 'flex';
                 return;
             }
 
             const { data: { user } } = await window.supabaseClient.auth.getUser();
 
             if (!user) {
+                // No user - redirect to auth immediately (no flash)
                 window.location.href = 'auth.html';
                 return;
             }
 
-            // Check if profile already complete
+            // Check if profile already complete (has practice info AND has password set)
             const metadata = user.user_metadata;
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectTarget = urlParams.get('redirect');
+            
+            // For Google OAuth users, check if they have a password set by checking identities
+            const hasGoogleIdentity = user.identities?.some(id => id.provider === 'google');
+            const hasEmailIdentity = user.identities?.some(id => id.provider === 'email');
+            
+            // If profile complete AND (has email identity OR is not a Google-only user)
             if (metadata?.practice_name && metadata?.practice_type) {
-                window.location.href = 'index.html';
-                return;
+                // Check if this is a Google user without password - they need to set one
+                if (hasGoogleIdentity && !hasEmailIdentity) {
+                    // Google user needs to set password - show form
+                    loadingScreen.style.display = 'none';
+                    document.querySelector('.profile-container').style.display = 'flex';
+                } else {
+                    // Fully complete - redirect immediately without showing form (no flash)
+                    if (redirectTarget === 'demo') {
+                        window.location.href = 'index.html#demo';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                    return;
+                }
+            } else {
+                // Show form for incomplete profile
+                loadingScreen.style.display = 'none';
+                document.querySelector('.profile-container').style.display = 'flex';
             }
 
             // Show user info
@@ -278,17 +370,61 @@
                 practiceType = formData.get('otherPractice');
             }
 
+            // Validate Password - Required for Google users
+            const password = formData.get('password');
+            const confirmPassword = formData.get('confirmPassword');
+
+            if (!password || !confirmPassword) {
+                showError('Password is required to complete your account setup.');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('Passwords do not match.');
+                return;
+            }
+
+            if (password.length < 8) {
+                showError('Password must be at least 8 characters.');
+                return;
+            }
+
+            // Password strength validation
+            const passwordErrors = [];
+            if (!/[A-Z]/.test(password)) passwordErrors.push('1 uppercase letter');
+            if (!/[0-9]/.test(password)) passwordErrors.push('1 number');
+            if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) passwordErrors.push('1 special character');
+
+            if (passwordErrors.length > 0) {
+                showError(`Password must contain: ${passwordErrors.join(', ')}`);
+                return;
+            }
+
+            // ===== Phone Number Format Validation =====
+            const phone = formData.get('phone');
+            if (phone && phone.trim() !== '') {
+                // Remove all non-digit characters for checking
+                const digitsOnly = phone.replace(/\D/g, '');
+                if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+                    showError('Please enter a valid phone number (10-15 digits)');
+                    return;
+                }
+            }
+
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-            const { error } = await window.supabaseClient.auth.updateUser({
+            const updateData = {
+                password: password,
                 data: {
                     full_name: formData.get('fullName'),
                     practice_type: practiceType,
                     practice_name: formData.get('practiceName'),
                     phone: formData.get('phone')
                 }
-            });
+            };
+
+            const { error } = await window.supabaseClient.auth.updateUser(updateData);
 
             if (error) {
                 showError(error.message);
@@ -296,14 +432,23 @@
                 btn.innerHTML = '<i class="fas fa-check"></i> Complete Setup';
             } else {
                 btn.innerHTML = '<i class="fas fa-check"></i> Success!';
+                
+                // Handle redirect param (e.g., back to demo)
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectTarget = urlParams.get('redirect');
+                
                 setTimeout(() => {
-                    window.location.href = 'index.html';
+                    if (redirectTarget === 'demo') {
+                        window.location.href = 'index.html#demo';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
                 }, 1000);
             }
         });
 
-        // Init
-        setTimeout(loadUserData, 100);
+        // Init - run immediately to prevent flash
+        loadUserData();
     </script>
 </body>
 

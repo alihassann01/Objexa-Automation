@@ -6,6 +6,12 @@ AOS.init({
     offset: 50
 });
 
+// ===== Force Scroll to Top on Page Load/Refresh =====
+if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+}
+window.scrollTo(0, 0);
+
 // ===== Navbar Scroll Effect =====
 const navbar = document.getElementById('navbar');
 let lastScroll = 0;
@@ -124,7 +130,7 @@ const userProfile = document.getElementById('userProfile');
 const userName = document.getElementById('userName');
 const logoutBtn = document.getElementById('logoutBtn');
 
-// Check auth state
+// Check auth state and enforce profile completion (prevents auth bypass)
 async function checkAuth() {
     if (!window.supabaseClient) {
         console.warn('Supabase not fully loaded yet. Build might be offline.');
@@ -135,6 +141,26 @@ async function checkAuth() {
 
     try {
         const { data: { user } } = await window.supabaseClient.auth.getUser();
+        
+        if (user) {
+            // ===== Auth Bypass Protection =====
+            // Check if user has completed their profile setup
+            const metadata = user.user_metadata;
+            const hasGoogleIdentity = user.identities?.some(id => id.provider === 'google');
+            const hasEmailIdentity = user.identities?.some(id => id.provider === 'email');
+            
+            // If profile is incomplete OR Google user without password, redirect to setup
+            const profileIncomplete = !metadata?.practice_name || !metadata?.practice_type;
+            const googleNeedsPassword = hasGoogleIdentity && !hasEmailIdentity;
+            
+            if (profileIncomplete || googleNeedsPassword) {
+                // User has not completed setup - redirect to complete-profile
+                // This prevents the back button exploit
+                window.location.href = 'complete-profile.html';
+                return;
+            }
+        }
+        
         updateAuthUI(user);
     } catch (e) {
         console.error("Auth check failed:", e);
@@ -146,7 +172,7 @@ function updateAuthUI(user) {
     if (user) {
         authBtn.style.display = 'none';
         userProfile.style.display = 'flex';
-        userName.textContent = user.email ? user.email.split('@')[0] : 'User';
+        userName.textContent = user.user_metadata?.full_name || (user.email ? user.email.split('@')[0] : 'User');
     } else {
         authBtn.style.display = 'inline-block';
         userProfile.style.display = 'none';
@@ -166,6 +192,9 @@ if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
         if (!window.supabaseClient) return;
 
+        // Clear any saved demo form data on logout to prevent data leaks
+        sessionStorage.removeItem('demoFormData');
+        
         await window.supabaseClient.auth.signOut();
         window.location.reload();
     });
@@ -179,26 +208,54 @@ setTimeout(checkAuth, 100);
 const demoForm = document.getElementById('demoForm');
 
 if (demoForm) {
-    // ===== Pre-fill Form from Saved Data (After verification redirect) =====
-    const savedDemoData = sessionStorage.getItem('demoFormData');
-    if (savedDemoData) {
-        try {
-            const formObj = JSON.parse(savedDemoData);
-            if (formObj.name) demoForm.querySelector('[name="name"]').value = formObj.name;
-            if (formObj.email) demoForm.querySelector('[name="email"]').value = formObj.email;
-            if (formObj.phone) demoForm.querySelector('[name="phone"]').value = formObj.phone;
-            if (formObj.practice) demoForm.querySelector('[name="practice"]').value = formObj.practice;
+    // ===== Pre-fill Form from Saved Data =====
+    window.addEventListener('load', async () => {
+        const savedDemoData = sessionStorage.getItem('demoFormData');
+        
+        // Check URL hash - only restore data if we're coming from auth flow with #demo
+        const shouldRestoreData = window.location.hash === '#demo' && savedDemoData;
+        
+        if (shouldRestoreData) {
+            // Check if user is actually logged in before restoring
+            if (window.supabaseClient) {
+                // Small delay to ensure auth state is ready
+                setTimeout(async () => {
+                    const { data: { user } } = await window.supabaseClient.auth.getUser();
 
-            // Scroll to demo section if we came from redirect
-            if (window.location.hash === '#demo') {
-                setTimeout(() => {
-                    document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
-                }, 300);
+                    if (user) {
+                        try {
+                            const formObj = JSON.parse(savedDemoData);
+                            
+                            // Only restore if data matches current session context
+                            // This prevents stale data from different users
+                            if (formObj.name) demoForm.querySelector('[name="name"]').value = formObj.name;
+                            if (formObj.email) demoForm.querySelector('[name="email"]').value = formObj.email;
+                            if (formObj.phone) demoForm.querySelector('[name="phone"]').value = formObj.phone;
+                            if (formObj.practice) demoForm.querySelector('[name="practice"]').value = formObj.practice;
+
+                            // Scroll to demo section
+                            const demoSection = document.getElementById('demo');
+                            if (demoSection) {
+                                demoSection.scrollIntoView({ behavior: 'smooth' });
+                            }
+                            
+                            // Clear the saved data after restoring to prevent reuse
+                            sessionStorage.removeItem('demoFormData');
+                        } catch (e) {
+                            // Clear corrupted data
+                            sessionStorage.removeItem('demoFormData');
+                        }
+                    } else {
+                        // No user logged in, clear stale data
+                        sessionStorage.removeItem('demoFormData');
+                    }
+                }, 500);
             }
-        } catch (e) {
-            console.log('Failed to restore form data:', e);
+        } else if (!window.location.hash.includes('demo')) {
+            // If not navigating to demo section, clear any stale demo data
+            sessionStorage.removeItem('demoFormData');
         }
-    }
+    });
 
     demoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -258,16 +315,24 @@ if (demoForm) {
 
             // Call Edge Function to send confirmation email
             try {
-                await fetch('https://vtlblicmwoaohjgbjpix.supabase.co/functions/v1/send-demo-confirmation', {
+                const emailResponse = await fetch('https://vtlblicmwoaohjgbjpix.supabase.co/functions/v1/send-demo-confirmation', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${(await window.supabaseClient.auth.getSession()).data.session?.access_token}`
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0bGJsaWNtd29hb2hqZ2JqcGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4ODQ3MjEsImV4cCI6MjA4NTQ2MDcyMX0.E3gGxIhO3rvhoL61DhvnEjX-2BYA_oXAnHi3klgLDpI'
                     },
                     body: JSON.stringify(bookingData)
                 });
+
+                if (!emailResponse.ok) {
+                    const errorData = await emailResponse.json();
+                    console.error('Edge Function Error:', errorData);
+                    // SHOW FULL ERROR STRUCTURE
+                    alert('Debug Error Details:\n' + JSON.stringify(errorData, null, 2));
+                }
             } catch (emailError) {
                 console.log('Email sending failed, but booking was saved:', emailError);
+                alert('Network Error sending email: ' + emailError.message);
             }
 
             // Show success message
@@ -275,7 +340,8 @@ if (demoForm) {
             submitBtn.style.background = 'var(--success)';
 
             // Show confirmation message
-            alert('✅ Demo booked successfully!\\n\\nWe\\'ve sent you a confirmation email with the details.');
+            // Show confirmation message
+            document.getElementById('successModal').classList.add('active');
 
             // Clear saved form data
             sessionStorage.removeItem('demoFormData');
